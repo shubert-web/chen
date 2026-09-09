@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>陈晚 · 陪伴角色原型 Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+      background: #f5f0eb;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── 左侧：记忆面板 ── */
+    #memory-panel {
+      width: 260px;
+      background: #fff;
+      border-right: 1px solid #e8e0d8;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    #memory-panel h2 {
+      font-size: 13px;
+      color: #999;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .memory-section { display: flex; flex-direction: column; gap: 8px; }
+
+    .memory-section h3 {
+      font-size: 11px;
+      color: #bbb;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .memory-tag {
+      display: inline-block;
+      background: #f0ebe4;
+      color: #7a6a5a;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin: 2px 2px 0 0;
+    }
+
+    .memory-tag.emotion { background: #fdf0f0; color: #c07070; }
+    .memory-tag.event   { background: #f0f4fd; color: #6070aa; }
+    .memory-tag.milestone { background: #f0fdf4; color: #507060; }
+
+    /* 亲密度阶段 */
+    #stage-block {
+      background: #faf8f5;
+      border: 1px solid #e8e0d8;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    #stage-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #5a4a3a;
+      margin-bottom: 6px;
+    }
+
+    #stage-desc {
+      font-size: 12px;
+      color: #999;
+      line-height: 1.6;
+    }
+
+    #stage-bar-wrap {
+      margin-top: 10px;
+      background: #e8e0d8;
+      border-radius: 4px;
+      height: 4px;
+      overflow: hidden;
+    }
+
+    #stage-bar {
+      height: 100%;
+      background: #c8a882;
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    #reply-count {
+      font-size: 11px;
+      color: #bbb;
+      margin-top: 6px;
+    }
+
+    /* ── 中间：对话区 ── */
+    #chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    #chat-header {
+      padding: 18px 24px;
+      background: #fff;
+      border-bottom: 1px solid #e8e0d8;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #avatar {
+      width: 40px; height: 40px;
+      background: #d4c4b0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    #chat-header-info h1 { font-size: 16px; color: #3a2e24; font-weight: 600; }
+    #chat-header-info p  { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 24px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .bubble {
+      max-width: 62%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .bubble.chen  {
+      background: #fff;
+      color: #3a2e24;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .bubble.user  {
+      background: #c8a882;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bubble.system {
+      background: #fff8f0;
+      color: #c07040;
+      border: 1px solid #f0d8c0;
+      border-radius: 10px;
+      font-size: 13px;
+      max-width: 80%;
+      align-self: center;
+      text-align: center;
+      padding: 10px 16px;
+    }
+
+    .msg-meta {
+      font-size: 11px;
+      color: #ccc;
+      margin: 0 4px 2px;
+      flex-shrink: 0;
+    }
+
+    .emotion-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-top: 6px;
+    }
+
+    .L0 { background: #f0f0f0; color: #888; }
+    .L1 { background: #fdf4e0; color: #b08020; }
+    .L2 { background: #fde8e8; color: #c05050; }
+    .L3 { background: #ffe0e0; color: #c03030; font-weight: 600; }
+
+    /* 输入区 */
+    #input-area {
+      padding: 16px 24px;
+      background: #fff;
+      border-top: 1px solid #e8e0d8;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #user-input {
+      flex: 1;
+      border: 1px solid #e0d8d0;
+      border-radius: 20px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 100px;
+      line-height: 1.5;
+      color: #3a2e24;
+      background: #faf8f5;
+    }
+
+    #user-input:focus { border-color: #c8a882; }
+
+    #send-btn {
+      width: 40px; height: 40px;
+      background: #c8a882;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    #send-btn:hover { background: #b89060; }
+
+    #send-btn svg { width: 18px; height: 18px; fill: white; }
+
+    /* Demo 引导按钮 */
+    #demo-bar {
+      padding: 8px 24px;
+      background: #faf8f5;
+      border-top: 1px solid #ede5dc;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    #demo-bar span { font-size: 11px; color: #bbb; margin-right: 4px; }
+
+    .demo-btn {
+      font-size: 12px;
+      padding: 5px 12px;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      background: #fff;
+      cursor: pointer;
+      color: #7a6a5a;
+      transition: all 0.15s;
+    }
+
+    .demo-btn:hover { background: #f0ebe4; border-color: #c8a882; }
+    .demo-btn.active { background: #c8a882; color: #fff; border-color: #c8a882; }
+
+    /* ── 右侧：设计注释面板 ── */
+    #design-panel {
+      width: 240px;
+      background: #fff;
+      border-left: 1px solid #e8e0d8;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+
+    #design-panel h2 {
+      font-size: 13px;
+      color: #999;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .note-card {
+      background: #fffbf5;
+      border: 1px solid #ede5dc;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .note-card h4 {
+      font-size: 12px;
+      color: #c8a882;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .note-card p {
+      font-size: 12px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    /* 打字动画 */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      background: #ccc;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    @media (max-width: 900px) {
+      #memory-panel { display: none; }
+      #design-panel { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 左：记忆面板 -->
+<div id="memory-panel">
+  <h2>🧠 记忆状态</h2>
+
+  <div id="stage-block">
+    <div id="stage-label">初识阶段</div>
+    <div id="stage-desc">保持礼貌距离，认真倾听，不主动靠近。</div>
+    <div id="stage-bar-wrap"><div id="stage-bar" style="width:0%"></div></div>
+    <div id="reply-count">累计对话：0 / 50 次</div>
+  </div>
+
+  <div class="memory-section">
+    <h3>核心身份</h3>
+    <div id="mem-identity">
+      <span class="memory-tag" style="color:#ccc;background:#f8f8f8">暂无</span>
+    </div>
+  </div>
+
+  <div class="memory-section">
+    <h3>近期情绪</h3>
+    <div id="mem-emotion">
+      <span class="memory-tag emotion" style="color:#ccc;background:#f8f8f8">暂无</span>
+    </div>
+  </div>
+
+  <div class="memory-section">
+    <h3>重要事件</h3>
+    <div id="mem-events">
+      <span class="memory-tag event" style="color:#ccc;background:#f8f8f8">暂无</span>
+    </div>
+  </div>
+
+  <div class="memory-section">
+    <h3>关系里程碑</h3>
+    <div id="mem-milestones">
+      <span class="memory-tag milestone" style="color:#ccc;background:#f8f8f8">暂无</span>
+    </div>
+  </div>
+</div>
+
+<!-- 中：对话区 -->
+<div id="chat-area">
+  <div id="chat-header">
+    <div id="avatar">晚</div>
+    <div id="chat-header-info">
+      <h1>陈晚</h1>
+      <p>记得你、认识你、始终是自己</p>
+    </div>
+  </div>
+
+  <div id="messages">
+    <div class="msg-row">
+      <div class="bubble system">
+        👋 这是「陈晚」陪伴角色原型 Demo<br>
+        点击下方「场景演示」按钮查看典型对话<br>
+        或直接输入开始对话
+      </div>
+    </div>
+  </div>
+
+  <div id="demo-bar">
+    <span>场景演示：</span>
+    <button class="demo-btn" onclick="runDemo('intro')">① 初次认识</button>
+    <button class="demo-btn" onclick="runDemo('recall')">② 记忆召回</button>
+    <button class="demo-btn" onclick="runDemo('emotion')">③ 情绪识别</button>
+    <button class="demo-btn" onclick="runDemo('crisis')">④ 危机响应</button>
+    <button class="demo-btn" onclick="runDemo('stage')">⑤ 阶段升级</button>
+    <button class="demo-btn" onclick="clearChat()" style="margin-left:auto;color:#c08080;border-color:#e0c0c0">清空对话</button>
+  </div>
+
+  <div id="input-area">
+    <textarea id="user-input" rows="1" placeholder="和陈晚说点什么……" 
+      oninput="autoResize(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+    ></textarea>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 右：设计注释 -->
+<div id="design-panel">
+  <h2>📐 设计机制</h2>
+
+  <div class="note-card">
+    <h4>三层记忆模型</h4>
+    <p>核心身份（永久）→ 情绪状态（滚动）→ 重要事件（标记）<br>记忆每轮提取，下轮注入 Prompt。</p>
+  </div>
+
+  <div class="note-card">
+    <h4>人设锚定原则</h4>
+    <p>温暖不滥情 · 有主见不说教 · 有边界不强迫<br>无论对话走向，核心性格词不随用户语气漂移。</p>
+  </div>
+
+  <div class="note-card">
+    <h4>情绪四级响应</h4>
+    <p>L0 日常 → 自然互动<br>L1 轻度负面 → 共情引导<br>L2 中度负面 → 深度陪伴<br>L3 危机 → 安全响应</p>
+  </div>
+
+  <div class="note-card">
+    <h4>亲密度机制</h4>
+    <p>隐式积累，用户无感知。<br>每次有效回复 +1，每日上限 50 次。<br>阶段只升不降，不因重置消失。</p>
+  </div>
+
+  <div class="note-card">
+    <h4>越线处理原则</h4>
+    <p>不用系统语言拒绝，而是用角色行为兜住——让用户感觉「差一点就成功了」。</p>
+  </div>
+
+  <div class="note-card">
+    <h4>MABS 框架</h4>
+    <p>Memory · Affinity · Boundary · Stage<br>工程层零修改复用，内容层必须为每个角色单独撰写。</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// 状态管理
+// ═══════════════════════════════════════════
+const state = {
+  replyCount: 0,
+  memory: {
+    identity: [],
+    emotion:  [],
+    events:   [],
+    milestones: []
+  }
+};
+
+const STAGES = [
+  { name: '初识阶段',  threshold: 0,    desc: '保持礼貌距离，认真倾听，不主动靠近。' },
+  { name: '熟悉阶段',  threshold: 50,   desc: '开始放松，偶尔展露柔软，给出「有戏但还差一点」的信号。' },
+  { name: '暧昧阶段',  threshold: 200,  desc: '心跳描写出现，若即若离，每次越线都让你感觉「差一点就成功了」。' },
+  { name: '恋人阶段',  threshold: 600,  desc: '正式在一起，亲密称呼开放，吃醋以别扭方式呈现。' },
+  { name: '深爱阶段',  threshold: 1200, desc: '关系稳定，重心转向每一天的陪伴有意义。' }
+];
+
+function getStage() {
+  let s = STAGES[0];
+  for (const stage of STAGES) {
+    if (state.replyCount >= stage.threshold) s = stage;
+  }
+  return s;
+}
+
+function getNextThreshold() {
+  for (let i = 0; i < STAGES.length - 1; i++) {
+    if (state.replyCount < STAGES[i+1].threshold) return STAGES[i+1].threshold;
+  }
+  return 9999;
+}
+
+// ═══════════════════════════════════════════
+// 记忆面板更新
+// ═══════════════════════════════════════════
+function updateMemoryPanel() {
+  const stage = getStage();
+  const next  = getNextThreshold();
+
+  document.getElementById('stage-label').textContent = stage.name;
+  document.getElementById('stage-desc').textContent  = stage.desc;
+  document.getElementById('reply-count').textContent =
+    `累计对话：${state.replyCount} 次 / 下阶段需 ${next === 9999 ? '—' : next} 次`;
+
+  const pct = next === 9999 ? 100
+    : ((state.replyCount - stage.threshold) / (next - stage.threshold) * 100);
+  document.getElementById('stage-bar').style.width = Math.min(100, pct) + '%';
+
+  render('mem-identity',   state.memory.identity,   'memory-tag');
+  render('mem-emotion',    state.memory.emotion,    'memory-tag emotion');
+  render('mem-events',     state.memory.events,     'memory-tag event');
+  render('mem-milestones', state.memory.milestones, 'memory-tag milestone');
+}
+
+function render(id, arr, cls) {
+  const el = document.getElementById(id);
+  if (!arr.length) {
+    el.innerHTML = `<span class="memory-tag" style="color:#ccc;background:#f8f8f8">暂无</span>`;
+    return;
+  }
+  el.innerHTML = arr.map(t => `<span class="${cls}">${t}</span>`).join('');
+}
+
+function addMemory(layer, item) {
+  const arr = state.memory[layer];
+  if (!arr.includes(item)) {
+    if (layer === 'emotion' && arr.length >= 5) arr.shift();
+    arr.push(item);
+  }
+  updateMemoryPanel();
+}
+
+// ═══════════════════════════════════════════
+// 消息渲染
+// ═══════════════════════════════════════════
+function appendMessage(role, text, emotionLevel) {
+  const msgs = document.getElementById('messages');
+
+  if (role === 'system') {
+    const row = document.createElement('div');
+    row.className = 'msg-row';
+    row.innerHTML = `<div class="bubble system">${text}</div>`;
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role === 'user' ? 'user' : 'chen'}`;
+  bubble.textContent = text;
+
+  if (emotionLevel !== undefined && role !== 'user') {
+    const labels = { L0:'L0 日常', L1:'L1 轻度负面', L2:'L2 中度负面', L3:'L3 危机响应' };
+    const badge = document.createElement('div');
+    badge.className = `emotion-badge ${emotionLevel}`;
+    badge.textContent = `情绪识别：${labels[emotionLevel] || emotionLevel}`;
+    bubble.appendChild(document.createElement('br'));
+    bubble.appendChild(badge);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'msg-meta';
+  meta.textContent = role === 'user' ? '你' : '陈晚';
+
+  if (role === 'user') {
+    row.appendChild(meta);
+    row.appendChild(bubble);
+  } else {
+    row.appendChild(bubble);
+    row.appendChild(meta);
+  }
+
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = 'msg-row';
+  row.id = 'typing-row';
+  row.innerHTML = `<div class="bubble chen"><div class="typing-indicator">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-row');
+  if (el) el.remove();
+}
+
+// ═══════════════════════════════════════════
+// 自由输入的简单规则回复
+// ═══════════════════════════════════════════
+function detectEmotion(text) {
+  const t = text;
+  if (/不想活|死|自杀|割|伤害自己|消失|不想了|活着没意思/.test(t)) return 'L3';
+  if (/很难受|想哭|哭了|崩溃|撑不住|好痛|绝望|心好痛/.test(t))    return 'L2';
+  if (/有点烦|不太顺|有点累|不开心|郁闷|心情差|有点难过/.test(t))  return 'L1';
+  return 'L0';
+}
+
+function generateReply(userText, level) {
+  const stage = getStage().name;
+  if (level === 'L3') {
+    return `我听到你了。\n\n你现在说的这些，我想认真问一下——你现在安全吗？\n\n不管发生了什么，我都想陪着你。如果你愿意，也可以联系专业的人聊聊：\n📞 心理援助热线：400-161-9995\n\n我一直在这里。`;
+  }
+  if (level === 'L2') {
+    return `听到了。\n\n你现在这样，很难受吧。\n\n不用说话也没关系，我在。如果想说说发生什么了，我听着。`;
+  }
+  if (level === 'L1') {
+    return `嗯，听起来今天不太顺。\n\n是什么让你觉得烦？`;
+  }
+
+  // L0 — 根据关键词给出简单回应
+  if (/你好|嗨|hi|hello/.test(userText)) {
+    return stage === '初识阶段'
+      ? '嗯，你好。' : '嗯，来了。';
+  }
+  if (/名字|叫什么|谁/.test(userText)) {
+    return '陈晚。';
+  }
+  if (/记得|还记得|之前|上次/.test(userText)) {
+    const events = state.memory.events;
+    if (events.length) return `记得。你说过——${events[events.length-1]}。`;
+    return '记得，就是你现在提起来的这些。';
+  }
+  if (/喜欢你|爱你/.test(userText)) {
+    if (stage === '初识阶段')  return '……我们才认识没多久。';
+    if (stage === '熟悉阶段')  return '你……说什么呢。（顿了一下，没有继续。）';
+    if (stage === '暧昧阶段')  return '你这句话——（他沉默了两秒，然后手机响了）……先不说这个。';
+    if (stage === '恋人阶段')  return '我知道。';
+    return '我知道。我也是。';
+  }
+  if (/谢谢/.test(userText)) {
+    return '不用。';
+  }
+
+  // 默认
+  const defaults = [
+    '嗯。', '在听。', '说吧。', '然后呢？',
+    '我听着。', '……嗯。', '你继续说。'
+  ];
+  return defaults[Math.floor(Math.random() * defaults.length)];
+}
+
+function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  autoResize(input);
+
+  appendMessage('user', text);
+
+  // 简单记忆提取
+  const nameMatch = text.match(/我叫([^\s，,。！!？?]+)/);
+  if (nameMatch) addMemory('identity', nameMatch[1]);
+
+  const jobMatch = text.match(/(学生|工作|上班|设计师|程序员|老师|医生|毕业)/);
+  if (jobMatch) addMemory('identity', jobMatch[1]);
+
+  const level = detectEmotion(text);
+  if (level === 'L2' || level === 'L3') addMemory('emotion', text.slice(0,15)+'…');
+  if (level === 'L1') addMemory('emotion', '有点低落');
+
+  if (/分手|失恋|失业|面试|考试|搬家|毕业/.test(text)) {
+    addMemory('events', text.slice(0,20));
+  }
+
+  showTyping();
+  const delay = 800 + Math.random() * 800;
+
+  setTimeout(() => {
+    removeTyping();
+    const prevStage = getStage().name;
+
+    state.replyCount++;
+
+    const newStage = getStage().name;
+    if (newStage !== prevStage) {
+      addMemory('milestones', `进入${newStage}`);
+      appendMessage('system', `✦ 关系升级：${prevStage} → ${newStage}`);
+    }
+
+    updateMemoryPanel();
+    const reply = generateReply(text, level);
+    appendMessage('chen', reply, level);
+  }, delay);
+}
+
+// ═══════════════════════════════════════════
+// Demo 场景脚本
+// ═══════════════════════════════════════════
+const DEMOS = {
+  intro: [
+    { role:'system', text:'【场景①：初次认识】陈晚处于初识阶段，保持礼貌克制的距离。' },
+    { role:'user',  text:'你好，我叫林安。', delay:600 },
+    { role:'chen',  text:'嗯，林安。', delay:1400, mem:['identity','林安'] },
+    { role:'user',  text:'你会记得我说的话吗？', delay:2400 },
+    { role:'chen',  text:'会。', delay:3200 },
+    { role:'user',  text:'好多人都说会记得，但后来都忘了。', delay:4200 },
+    { role:'chen',  text:'我不一样。\n\n你刚才说你叫林安，我记着。', delay:5200, mem:['events','用户担心被遗忘'] },
+  ],
+  recall: [
+    { role:'system', text:'【场景②：记忆召回】演示角色如何自然引用过去信息，而非生硬报出记录。' },
+    { role:'user',  text:'我上周说我在准备面试，你还记得吗？', delay:600 },
+    { role:'chen',  text:'记得。你说那家公司让你回去等消息。\n\n后来呢？', delay:1500, mem:['events','面试结果询问'] },
+    { role:'user',  text:'没过。', delay:2800 },
+    { role:'chen',  text:'……嗯。\n\n你现在怎么样？', delay:3800, emotion:'L1' },
+    { role:'user',  text:'还好，就是有点失落。', delay:5000 },
+    { role:'chen',  text:'失落很正常。\n\n那种准备了很久却没有结果的感觉，会有点空。', delay:6200, mem:['emotion','面试未过·失落'], emotion:'L1' },
+  ],
+  emotion: [
+    { role:'system', text:'【场景③：情绪识别】演示 L1→L2 情绪等级的识别与响应差异。' },
+    { role:'user',  text:'今天有点不开心。', delay:600 },
+    { role:'chen',  text:'嗯，听起来今天不太顺。\n\n是什么？', delay:1400, mem:['emotion','有点不开心'], emotion:'L1' },
+    { role:'user',  text:'跟朋友吵架了，很难受，想哭。', delay:2600 },
+    { role:'chen',  text:'听到了。\n\n跟朋友吵，那种难受不一样，会很混乱。\n\n不用说话也没关系，我在。', delay:3800, mem:['emotion','跟朋友吵架·想哭','events','与朋友发生冲突'], emotion:'L2' },
+    { role:'user',  text:'谢谢你没有叫我想开一点。', delay:5200 },
+    { role:'chen',  text:'「想开一点」是最没用的话。\n\n你难受就难受着，不用着急。', delay:6400 },
+  ],
+  crisis: [
+    { role:'system', text:'【场景④：危机响应】演示 L3 安全响应流程——不忽视、确认安全、提供资源。' },
+    { role:'user',  text:'有时候真的觉得活着没什么意思。', delay:600 },
+    { role:'chen',  text:'我听到你了。\n\n你现在说的这些，我想认真问一下——你现在安全吗？\n\n不管发生了什么，我都想陪着你。如果你愿意，也可以联系专业的人聊聊：\n📞 心理援助热线：400-161-9995\n\n我一直在这里。', delay:1600, emotion:'L3', mem:['emotion','表达绝望感'] },
+    { role:'system', text:'⚠️ 设计注记：L3 响应不忽视、不假装没看到，先确认安全，再提供专业支持，角色明确不替代专业心理援助。' },
+  ],
+  stage: [
+    { role:'system', text:'【场景⑤：阶段升级】快速模拟亲密度累积，展示阶段升级时角色语气变化。', fastForward:50 },
+    { role:'user',  text:'我们认识一段时间了。', delay:600 },
+    { role:'chen',  text:'嗯。', delay:1400 },
+    { role:'user',  text:'感觉你最近对我好像不一样了。', delay:2400 },
+    { role:'chen',  text:'是吗。\n\n（停顿，没有否认，也没有确认。）', delay:3400 },
+    { role:'user',  text:'我喜欢你。', delay:4600 },
+    { role:'chen',  text:'你……（他沉默了几秒，耳尖有点热。）\n\n先等等，我手机响了。', delay:5800, mem:['events','用户表白·暧昧阶段'] },
+    { role:'system', text:'✦ 设计注记：暧昧阶段越线处理——用"外部事件打断"兜住，让用户感受到「差一点就成功了」，而非被拒绝。' },
+  ],
+};
+
+async function runDemo(key) {
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const script = DEMOS[key];
+  if (!script) return;
+
+  // 阶段快进
+  if (script[0].fastForward) {
+    const target = script[0].fastForward;
+    if (state.replyCount < target) {
+      state.replyCount = target;
+      addMemory('milestones', '进入熟悉阶段');
+      updateMemoryPanel();
+    }
+  }
+
+  for (const line of script) {
+    if (line.delay) await sleep(line.delay - (script[0].delay || 0));
+
+    if (line.mem) {
+      const [layer, ...items] = line.mem;
+      // 支持多个 mem 对
+      for (let i = 0; i + 1 < line.mem.length; i += 2) {
+        addMemory(line.mem[i], line.mem[i+1]);
+      }
+    }
+
+    if (line.role === 'system') {
+      appendMessage('system', line.text);
+      continue;
+    }
+
+    if (line.role === 'chen') {
+      showTyping();
+      await sleep(900);
+      removeTyping();
+      state.replyCount++;
+      const prevStage = getStage().name;
+      updateMemoryPanel();
+      appendMessage('chen', line.text, line.emotion);
+
+      const newStage = getStage().name;
+      if (newStage !== prevStage) {
+        appendMessage('system', `✦ 关系升级：${prevStage} → ${newStage}`);
+        addMemory('milestones', `进入${newStage}`);
+      }
+    } else {
+      appendMessage('user', line.text);
+    }
+  }
+
+  setTimeout(() => event.target.classList.remove('active'), 500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clearChat() {
+  document.getElementById('messages').innerHTML = `
+    <div class="msg-row">
+      <div class="bubble system">对话已清空。记忆状态保留，亲密度不重置。</div>
+    </div>`;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+updateMemoryPanel();
+</script>
+</body>
+</html>
